@@ -50,6 +50,7 @@ void loop()
   
   digitalWrite(Light_Port, HIGH);
   
+  // Turn in the direction of departure of the object horizontally and vertically
   if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 0U) && (digitalRead(Down_Port) == 0U) && (digitalRead(Left_Port) == 0U) && (y < MAX_ANGLE))
   {
     y += angle;
@@ -75,6 +76,43 @@ void loop()
   {
     x -= angle;
     horizontalServo.write(x);
+    delay(40U);
+  }
+
+  // Turn in the direction of departure of the object diagonally
+  if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 1U) && (digitalRead(Down_Port) == 0U) && (digitalRead(Left_Port) == 0U) && (y < MAX_ANGLE) && (x > MIN_ANGLE))
+  {
+    x -= angle;
+    y += angle;
+    horizontalServo.write(x);
+    verticalServo.write(y);
+    delay(40U);
+  }
+
+  if ((digitalRead(Up_Port) == 0U) && (digitalRead(Right_Port) == 1U) && (digitalRead(Down_Port) == 1U) && (digitalRead(Left_Port) == 0U) && (y > MIN_ANGLE) && (x > MIN_ANGLE))
+  {
+    x -= angle;
+    y -= angle;
+    horizontalServo.write(x);
+    verticalServo.write(y);
+    delay(40U);
+  }
+
+  if ((digitalRead(Up_Port) == 0U) && (digitalRead(Right_Port) == 0U) && (digitalRead(Down_Port) == 1U) && (digitalRead(Left_Port) == 1U) && (y > MIN_ANGLE) && (x < MAX_ANGLE))
+  {
+    x += angle;
+    y -= angle;
+    horizontalServo.write(x);
+    verticalServo.write(y);
+    delay(40U);
+  }
+  
+  if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 0U) && (digitalRead(Down_Port) == 0U) && (digitalRead(Left_Port) == 1U) && (y < MAX_ANGLE) && (x < MAX_ANGLE))
+  {
+    x += angle;
+    y += angle;
+    horizontalServo.write(x);
+    verticalServo.write(y);
     delay(40U);
   }
 }
