@@ -40,25 +40,25 @@
 #define SERVO_MIN_IMP 920U
 #define SERVO_MAX_IMP 2080U
 
+#define MAX_ERROR 5U
+
+#define BUTTON_MAIN_MENU 16743045UL
+#define BUTTON_PROGRAM1 16724175UL
+#define BUTTON_PROGRAM2 16718055UL
+#define BUTTON_4 16716015UL
+#define BUTTON_5 16726215UL
+#define BUTTON_6 16734885UL
+#define BUTTON_7 16728765UL
+#define BUTTON_8 16730805UL
+#define BUTTON_9 16732845UL
+
+unsigned long fromRemote;
+
 Servo horizontalServo, verticalServo;
 Servo foldingRightSide, foldingLeftSide;
 
 IRrecv irrecv(30U);
 decode_results whichButton;
-
-unsigned int angle = 2U;
-unsigned int x = 90U;
-unsigned int y = 90U;
-unsigned int sector = 0U;
-unsigned int maxLuminance = 0U;
-unsigned int angleMaxLuminance = 0U;
-unsigned int i, turnToFoundLight_Speed, turnToNewSector_Speed, holdProgram2, lightDifference;
-unsigned long fromRemote;
-
-unsigned int isFirstIteration = 1U;
-unsigned int isBeginning = 1U;
-unsigned int finish = 0U;
-unsigned int isLightFound = 0U;
 
 void setup()
 {
@@ -131,7 +131,7 @@ void foldFrame(const unsigned int foldingType)
   }
 
   if (1U == foldingType) 
-    for (cnt = 1U; cnt < 660U; cnt++)
+    for (cnt = 1U; cnt < 630U; cnt++)
     {
       foldingLeftSide.writeMicroseconds(1420U + cnt);
       foldingRightSide.writeMicroseconds(1580U - cnt);
@@ -243,261 +243,20 @@ void checkIsButtonPressed()
   }
 }
 
-void loop()
+void trackObject()
 {
-  digitalWrite(Program1LED_Port, LOW); 
-  digitalWrite(Program2LED_Port, LOW); 
-  digitalWrite(NoProgramLED_Port, HIGH);
-  checkIsButtonPressed();
-
-  if (16724175UL == fromRemote)
-  { 
-    digitalWrite(Program1LED_Port, HIGH); 
-    digitalWrite(Program2LED_Port, LOW); 
-    digitalWrite(NoProgramLED_Port, LOW);  
-    foldFrame(4U);
-    digitalWrite(ServoPowerSource_Port, HIGH);
-    
-    if (1U == isBeginning)
-    {
-      verticalServo.write(110U);
-      horizontalServo.write(92U);
-      delay(1000U);
-      isBeginning = 0U;
-    }
-
-    //Find the light source
-    maxLuminance = 0U;
-    while (maxLuminance < 100U)
-    { 
-      if (16743045UL == fromRemote)
-      {
-        finish = 1U;
-        break;
-      } 
-      verticalServo.write(110U);
-      horizontalServo.write(6U);
-      delay(500U);
-  
-      moveLeftFrontWheel(0U, 1U);
-      moveLeftRearWheel(0U, 1U);
-      moveRightFrontWheel(0U, 0U);
-      moveRightRearWheel(0U, 0U);
-      digitalWrite(ServoPowerSource_Port, HIGH);
-      delay(1000U);
-      foldFrame(4U);
-      delay(2000U);
-      sector = 10U;
-      maxLuminance = 0U;
-      angleMaxLuminance = 0U;
-      delay(1000U);
-
-      for (i = 0U; i <= 85U; i += 1U)
-      {
-        if (16743045UL == fromRemote)
-        {
-          finish = 1U;
-          break;
-        }
-        //Serial.println(maxLuminance);
-        if (sector <= 180U)
-        {
-          if (maxLuminance < analogRead(A0))
-          {
-            maxLuminance = analogRead(A0);
-            angleMaxLuminance = sector;
-          }
-          horizontalServo.write(sector);
-          delay(200U);
-          sector += 2U;
-        }
-      }
-      
-      if ((maxLuminance < 100U) && (finish == 0U))
-      {
-        digitalWrite(ServoPowerSource_Port, LOW);
-        foldFrame(2U);
-        delay(3000U);
-        for (turnToNewSector_Speed = 200U; turnToNewSector_Speed < 220U; turnToNewSector_Speed += 2U)
-        { 
-          moveLeftFrontWheel(turnToNewSector_Speed, 1U);
-          moveLeftRearWheel(turnToNewSector_Speed, 1U);
-          moveRightFrontWheel(turnToNewSector_Speed, 0U);
-          moveRightRearWheel(turnToNewSector_Speed, 0U); 
-          delay(30U);
-        }
-      }
-    }
-
-    //Move to the light
-    digitalWrite(ServoPowerSource_Port, HIGH);
-    horizontalServo.write(angleMaxLuminance);
-    delay(3000U);
-    verticalServo.write(90U);
-    horizontalServo.write(93U);
-    delay(1000U);
-    if (0U == finish)
-      foldFrame(2U); 
-    delay(3000U);
-    //Serial.print(abs(maxLuminance - analogRead(A0)));
-    //Serial.print(' ');
-    //Serial.println(angleMaxLuminance);
-    lightDifference = abs(maxLuminance-analogRead(A0));
-    isLightFound = 1U;
-    turnToFoundLight_Speed = 170U;
- 
-    if (lightDifference <= 10U)
-    {
-      foldFrame(4U);
-      verticalServo.write(110U);
-      delay(1000U);
-  
-      for (i = 1U; i < 230U; i += 5U)
-      {
-        moveLeftFrontWheel(i, 1U);
-        moveLeftRearWheel(i, 1U);
-        moveRightFrontWheel(i, 1U);
-        moveRightRearWheel(i, 1U); 
-      }
-      moveLeftFrontWheel(0U, 0U);
-      moveLeftRearWheel(0U, 0U);
-      moveRightFrontWheel(0U, 1U);
-      moveRightRearWheel(0U, 1U);
-      finish = 1U; 
-      delay(3000U);
-    } 
-    while ((angleMaxLuminance < 90U) &&(lightDifference > 10U) && (finish == 0U))
-    {
-      if (16743045UL == fromRemote)
-      {
-        finish = 1U;
-        break;
-      } 
-    
-      lightDifference = abs(maxLuminance - analogRead(A0));
-      if (turnToFoundLight_Speed < 200U)
-        turnToFoundLight_Speed += 2U;
-      digitalWrite(ServoPowerSource_Port, LOW);
-      moveLeftFrontWheel(turnToFoundLight_Speed, 1U);
-      moveLeftRearWheel(turnToFoundLight_Speed, 1U);
-      moveRightFrontWheel(turnToFoundLight_Speed, 0U);
-      moveRightRearWheel(turnToFoundLight_Speed, 0U); 
-
-      if (lightDifference < 10U)
-      {
-        moveLeftFrontWheel(0U, 1U);
-        moveLeftRearWheel(0U, 1U);
-        moveRightFrontWheel(0U, 0U);
-        moveRightRearWheel(0U, 0U);
-        isLightFound = 0U;
-        break; 
-      }
-    }
-    moveLeftFrontWheel(0U, 1U);
-    moveLeftRearWheel(0U, 1U);
-    moveRightFrontWheel(0U, 0U);
-    moveRightRearWheel(0U, 0U);
-    delay(1000U);
-    if (0U == isLightFound)
-    {
-      foldFrame(4U);
-      digitalWrite(ServoPowerSource_Port, HIGH);
-      delay(100U);
-      verticalServo.write(90U);
-      delay(500U); 
-      digitalWrite(ServoPowerSource_Port, LOW);
-      delay(2000U);
-      for (i = 1U; i < 230U; i += 5U)
-      {
-        moveLeftFrontWheel(i, 1U);
-        moveLeftRearWheel(i, 1U);
-        moveRightFrontWheel(i, 1U);
-        moveRightRearWheel(i, 1U); 
-      }
-      isLightFound = 1U;
-      delay(1000U);
-    }
-    moveLeftFrontWheel(0U, 0U);
-    moveLeftRearWheel(0U, 0U);
-    moveRightFrontWheel(0U, 1U);
-    moveRightRearWheel(0U, 1U); 
-    delay(3000U);
-
-    while ((angleMaxLuminance > 90U) && (lightDifference > 10U) && (0U == finish))
-    {
-      if (16743045UL == fromRemote)
-      {
-        finish = 1;
-        break;
-      } 
-      lightDifference = abs(maxLuminance - analogRead(A0));
-      if (turnToFoundLight_Speed < 200U)
-        turnToFoundLight_Speed += 2U;
-      digitalWrite(ServoPowerSource_Port, LOW);
-      moveLeftFrontWheel(turnToFoundLight_Speed, 0U);
-      moveLeftRearWheel(turnToFoundLight_Speed, 0U);
-      moveRightFrontWheel(turnToFoundLight_Speed, 1U);
-      moveRightRearWheel(turnToFoundLight_Speed, 1U); 
-
-      if (lightDifference < 10U)
-      {
-        moveLeftFrontWheel(0U, 1U);
-        moveLeftRearWheel(0U, 1U);
-        moveRightFrontWheel(0U, 0U);
-        moveRightRearWheel(0U, 0U);
-        isLightFound = 0U;
-        break; 
-      }
-    }
-    
-    moveLeftFrontWheel(0U, 1U);
-    moveLeftRearWheel(0U, 1U);
-    moveRightFrontWheel(0U, 0U);
-    moveRightRearWheel(0U, 0U);
-    delay(1000U);
-    if (0U == isLightFound)
-    {
-      foldFrame(4U);
-      digitalWrite(ServoPowerSource_Port, HIGH);
-      delay(100U);
-      verticalServo.write(90U);
-      delay(500U); 
-      digitalWrite(ServoPowerSource_Port, LOW); 
-      delay(2000U);
-      for (i = 1U; i < 230U; i += 5U)
-      {
-        moveLeftFrontWheel(i, 1U);
-        moveLeftRearWheel(i, 1U);
-        moveRightFrontWheel(i, 1U);
-        moveRightRearWheel(i, 1U); 
-      }
-      isLightFound = 1U;
-      delay(1000U);
-    }
-    moveLeftFrontWheel(0U, 0U);
-    moveLeftRearWheel(0U, 0U);
-    moveRightFrontWheel(0U, 1U);
-    moveRightRearWheel(0U, 1U); 
-    delay(5000U);
-  }
-  
-  holdProgram2 = 0U;
-  if (16718055UL == fromRemote)
-  {
-    holdProgram2 = 1U;
-    digitalWrite(Program1LED_Port, LOW); 
-    digitalWrite(Program2LED_Port, HIGH); 
-    digitalWrite(NoProgramLED_Port, LOW);
-  }
-  
-  while (holdProgram2)
+  unsigned int isFirstIteration = 1U;
+  unsigned int angle = 2U;
+  unsigned int x = 90U;
+  unsigned int y = 90U;
+  while (true)
   {
     checkIsButtonPressed();
   
-    if  (16724175UL == fromRemote)
-      holdProgram2 = 0U;
-    digitalWrite(ServoPowerSource_Port, HIGH);
-    if (1U == isFirstIteration)
+    if  (BUTTON_MAIN_MENU == fromRemote)
+      break; 
+    digitalWrite(ServoPowerSource_Port, LOW);
+    if (isFirstIteration)
     {
       horizontalServo.write(x);
       verticalServo.write(y);
@@ -509,8 +268,6 @@ void loop()
     //Serial.print(digitalRead(Right_Port));
     //Serial.print(digitalRead(Down_Port));
     //Serial.print(digitalRead(Left_Port));
-  
-    digitalWrite(Light_Port, HIGH);
   
     // Turn in the direction of departure of the object horizontally and vertically
     if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 0U) && (digitalRead(Down_Port) == 0U) && (digitalRead(Left_Port) == 0U) && (y < MAX_ANGLE))
@@ -606,5 +363,354 @@ void loop()
       horizontalServo.write(x);
       delay(40U);
     }
+  }
+}
+
+void stopPlatform()
+{
+  moveLeftFrontWheel(0U, 1U);
+  moveLeftRearWheel(0U, 1U);
+  moveRightFrontWheel(0U, 0U);
+  moveRightRearWheel(0U, 0U);
+}
+
+void moveToLight()
+{
+  unsigned int i;
+  foldFrame(4U);
+  digitalWrite(ServoPowerSource_Port, LOW);
+  delay(100U);
+  verticalServo.write(90U);
+  delay(500U); 
+  digitalWrite(ServoPowerSource_Port, HIGH);
+  delay(2000U);
+   
+  for (i = 1U; i < 230U; i += 5U)
+  {
+    moveLeftFrontWheel(i, 1U);
+    moveLeftRearWheel(i, 1U);
+    moveRightFrontWheel(i, 1U);
+    moveRightRearWheel(i, 1U); 
+  }
+  delay(1000U);
+  stopPlatform();
+  delay(3000U);
+}
+
+void findAndMoveToLight()
+{
+  static unsigned int isBeginning = 1U;
+  unsigned int sector = 0U;
+  unsigned int maxLuminance = 0U;
+  unsigned int angleMaxLuminance = 0U;
+  unsigned int turnToFoundLight_Speed = 0U;
+  unsigned int i, turnToNewSector_Speed, lightDifference;
+  unsigned int finish = 0U;
+  unsigned int isLightFound = 0U;
+    
+  foldFrame(4U);
+  digitalWrite(ServoPowerSource_Port, LOW);
+    
+  if (isBeginning)
+  {
+    verticalServo.write(110U);
+    horizontalServo.write(92U);
+    delay(1000U);
+    isBeginning = 0U;
+  }
+
+  //Find the light source
+  maxLuminance = 0U;
+  while ((maxLuminance < 100U) && (!finish))
+  { 
+    if (BUTTON_MAIN_MENU == fromRemote)
+    {
+      finish = 1U;
+      break;
+    } 
+    verticalServo.write(110U);
+    horizontalServo.write(6U);
+    delay(500U);
+
+    stopPlatform();
+    digitalWrite(ServoPowerSource_Port, LOW);
+    delay(1000U);
+    foldFrame(4U);
+    delay(2000U);
+    sector = 10U;
+    maxLuminance = 0U;
+    angleMaxLuminance = 0U;
+    delay(1000U);
+
+    for (i = 0U; i <= 85U; i += 1U)
+    {
+      if (BUTTON_MAIN_MENU == fromRemote)
+      {
+        finish = 1U;
+        break;
+      }
+      //Serial.println(maxLuminance);
+      if (sector <= 180U)
+      {
+        if (maxLuminance < analogRead(A0))
+        {
+          maxLuminance = analogRead(A0);
+          angleMaxLuminance = sector;
+        }
+        Serial.println(analogRead(A0));
+        horizontalServo.write(sector);
+        delay(200U);
+        sector += 2U;
+      }
+    }
+      
+    if ((maxLuminance < 100U) && (!finish))
+    {
+      digitalWrite(ServoPowerSource_Port, HIGH);
+      foldFrame(2U);
+      delay(3000U);
+      for (turnToNewSector_Speed = 200U; turnToNewSector_Speed < 220U; turnToNewSector_Speed += 2U)
+      { 
+        moveLeftFrontWheel(turnToNewSector_Speed, 1U);
+        moveLeftRearWheel(turnToNewSector_Speed, 1U);
+        moveRightFrontWheel(turnToNewSector_Speed, 0U);
+        moveRightRearWheel(turnToNewSector_Speed, 0U); 
+        delay(30U);
+      }
+    }
+  }
+
+  if (!finish)
+  {
+    //Move to the light
+    digitalWrite(ServoPowerSource_Port, LOW);
+    horizontalServo.write(angleMaxLuminance);
+    delay(3000U);
+    verticalServo.write(90U);
+    horizontalServo.write(90U);
+    delay(1000U);
+    foldFrame(2U); 
+    delay(3000U);
+    
+    //Serial.print(abs(maxLuminance - analogRead(A0)));
+    //Serial.print(' ');
+    //Serial.println(angleMaxLuminance);
+    
+    lightDifference = abs(maxLuminance-analogRead(A0));
+    isLightFound = 0U;
+    turnToFoundLight_Speed = 170U;
+    if (lightDifference <= MAX_ERROR)
+    {
+      moveToLight();
+      finish = 1U;
+    } 
+
+    if (BUTTON_MAIN_MENU == fromRemote)
+      finish = 1U;
+    
+    if ((angleMaxLuminance < 90U) && (lightDifference > MAX_ERROR) && (!finish))
+    {    
+      turnToFoundLight_Speed = 210U;
+      digitalWrite(ServoPowerSource_Port, HIGH);
+      moveLeftFrontWheel(turnToFoundLight_Speed, 1U);
+      moveLeftRearWheel(turnToFoundLight_Speed, 1U);
+      moveRightFrontWheel(turnToFoundLight_Speed, 0U);
+      moveRightRearWheel(turnToFoundLight_Speed, 0U); 
+      
+      while (lightDifference > MAX_ERROR)
+      {
+        lightDifference = abs(maxLuminance - analogRead(A0));
+        //Serial.print(maxLuminance);
+        //Serial.print(" ");
+        //Serial.println(analogRead(A0));
+        if (lightDifference < MAX_ERROR)
+        {
+          stopPlatform();
+          isLightFound = 1U;
+          break; 
+        }
+      }
+    }
+    stopPlatform();
+    delay(1000U);
+    if ((isLightFound) && (!finish))
+    {
+      moveToLight();
+      finish = 1U;
+    }
+
+    if (BUTTON_MAIN_MENU == fromRemote)
+      finish = 1U;
+      
+    if ((angleMaxLuminance > 90U) && (lightDifference > MAX_ERROR) && (!finish))
+    {
+      turnToFoundLight_Speed = 210U;
+      digitalWrite(ServoPowerSource_Port, HIGH);
+      moveLeftFrontWheel(turnToFoundLight_Speed, 0U);
+      moveLeftRearWheel(turnToFoundLight_Speed, 0U);
+      moveRightFrontWheel(turnToFoundLight_Speed, 1U);
+      moveRightRearWheel(turnToFoundLight_Speed, 1U);
+
+      while (lightDifference > MAX_ERROR)
+      {
+        lightDifference = abs(maxLuminance - analogRead(A0)); 
+        //Serial.print(maxLuminance);
+        //Serial.print(" ");
+        //Serial.println(analogRead(A0));
+        if (lightDifference < MAX_ERROR)
+        {
+          stopPlatform();
+          isLightFound = 1U;
+          break; 
+        }
+      }
+    }
+    if ((isLightFound) && (!finish))
+    {
+      moveToLight();
+      finish = 1U;
+    }
+  }
+}
+
+void demonstration()
+{
+  unsigned int i;
+
+  digitalWrite(ServoPowerSource_Port, HIGH);
+  foldFrame(1U);
+  delay (1000U);
+  foldFrame(0U);
+  delay (1000U);
+  foldFrame(2U);
+  delay (1000U);
+  foldFrame(3U);
+  delay (1000U);
+
+  if (fromRemote != BUTTON_MAIN_MENU)
+  {
+    for (i = 0U; i < 200U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 1U);
+      moveLeftRearWheel(i, 1U);
+      moveRightFrontWheel(i, 1U);
+      moveRightRearWheel(i, 1U);
+    }
+    delay (500U);
+    stopPlatform();
+    delay (2000U);
+    
+    for (i = 0U; i < 200U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 0U);
+      moveLeftRearWheel(i, 0U);
+      moveRightFrontWheel(i, 0U);
+      moveRightRearWheel(i, 0U);
+    }
+    delay (500U);
+    stopPlatform();
+    foldFrame(2U);
+    delay(1000U);
+    
+    for (i = 0U; i < 200U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 1U);
+      moveLeftRearWheel(i, 1U);
+      moveRightFrontWheel(i, 1U);
+      moveRightRearWheel(i, 1U);
+    }
+    delay (500U);
+    stopPlatform();
+    delay(1000U);
+  
+    for (i = 0U; i < 200U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 0U);
+      moveLeftRearWheel(i, 0U);
+      moveRightFrontWheel(i, 0U);
+      moveRightRearWheel(i, 0U);
+    }
+    delay (500U);
+    stopPlatform();
+    delay(1000U);
+  
+    for (i = 200U; i < 230U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 0U);
+      moveLeftRearWheel(i, 0U);
+      moveRightFrontWheel(i, 1U);
+      moveRightRearWheel(i, 1U);
+    }
+    delay (2000U);
+    stopPlatform();
+    delay(2000U);
+  
+    for (i = 200U; i < 230U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 1U);
+      moveLeftRearWheel(i, 1U);
+      moveRightFrontWheel(i, 0U);
+      moveRightRearWheel(i, 0U);
+    }
+    delay (2000U);
+    stopPlatform();
+    delay(2000U);
+    
+    foldFrame(4U);
+    for (i = 200U; i < 230U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 0U);
+      moveLeftRearWheel(i, 0U);
+      moveRightFrontWheel(i, 1U);
+      moveRightRearWheel(i, 1U);
+    }
+    delay (2000U);
+    stopPlatform();
+    delay(2000U);
+  
+    for (i = 200U; i < 230U; i += 5U)
+    {
+      moveLeftFrontWheel(i, 1U);
+      moveLeftRearWheel(i, 1U);
+      moveRightFrontWheel(i, 0U);
+      moveRightRearWheel(i, 0U);
+    }
+    delay (2000U);
+    stopPlatform();
+    delay(2000U); 
+  }
+}
+
+void loop()
+{
+  digitalWrite(Program1LED_Port, LOW); 
+  digitalWrite(Program2LED_Port, LOW); 
+  digitalWrite(NoProgramLED_Port, HIGH);
+  digitalWrite(Light_Port, HIGH);
+  checkIsButtonPressed();
+
+  if (BUTTON_PROGRAM1 == fromRemote)
+  { 
+    digitalWrite(Program1LED_Port, HIGH); 
+    digitalWrite(Program2LED_Port, LOW); 
+    digitalWrite(NoProgramLED_Port, LOW);
+    findAndMoveToLight();
+  }
+  
+  if (BUTTON_PROGRAM2 == fromRemote)
+  {
+    digitalWrite(Program1LED_Port, LOW); 
+    digitalWrite(Program2LED_Port, HIGH); 
+    digitalWrite(NoProgramLED_Port, LOW);
+    digitalWrite(Light_Port, LOW);
+    trackObject();
+  }
+
+  if (BUTTON_4 == fromRemote)
+  {
+    digitalWrite(Program1LED_Port, LOW); 
+    digitalWrite(Program2LED_Port, HIGH); 
+    digitalWrite(NoProgramLED_Port, HIGH);
+    demonstration();
   }
 }
