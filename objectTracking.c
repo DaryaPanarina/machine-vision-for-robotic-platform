@@ -115,4 +115,33 @@ void loop()
     verticalServo.write(y);
     delay(40U);
   }
+
+  // Turn in the direction of appearance of the object
+  if ((digitalRead(Up_Port) == 0U) && (digitalRead(Right_Port) == 1U) && (digitalRead(Down_Port) == 1U) && (digitalRead(Left_Port) == 1U) && (y > MIN_ANGLE))
+  {
+    y -= angle;
+    verticalServo.write(y); 
+    delay(40U);
+  }
+
+  if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 1U) && (digitalRead(Down_Port) == 0U) && (digitalRead(Left_Port) == 1U) && (y < MAX_ANGLE))
+  {
+    y += angle;
+    verticalServo.write(y);
+    delay(40U);
+  }
+
+  if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 1U) && (digitalRead(Down_Port) == 1U) && (digitalRead(Left_Port) == 0U) && (x > MIN_ANGLE))
+  {
+    x -= angle;
+    horizontalServo.write(x); 
+    delay(40U);
+  }
+
+  if ((digitalRead(Up_Port) == 1U) && (digitalRead(Right_Port) == 0U) && (digitalRead(Down_Port) == 1U) && (digitalRead(Left_Port) == 1U) && (x < MAX_ANGLE))
+  {
+    x += angle;
+    horizontalServo.write(x);
+    delay(40U);
+  }
 }
